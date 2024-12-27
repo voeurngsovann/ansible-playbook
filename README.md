@@ -11,10 +11,19 @@
     ansible all -i hosts -k -u root -m authorized_key -a "user=root state=present key=\"{{ lookup('file','/home/ansible/.ssh/id_rsa.pub') }}\""
 # For oracle RAC enviroment install only firstnode it will automatic install in the second nodes unless root passwordless set in oracle rac enviroment
 
-
+  
 
 # Note : Before deploy this playbook in production enviroment make sure you are testing in your labs enviroment first  
+  Check on file
+  
+    -  cat ansible.cfg
+    
+        [defaults]
+        interpreter_python = auto_legacy_silent
+        command_warnings=False
+        remote_user = root
+        become = True
+        host_key_checking = False
 
- 
-
+        
     # ansible-playbook -i hosts installahf.yml
