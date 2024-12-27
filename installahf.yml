@@ -1,0 +1,118 @@
+# this is the ansible playbook for install or upgrade the lasted version of oracle Autonomous Health Framework
+##### logic is that 
+# if it detect the target servers are not yet have oracle AHF then it will install with the lasted version
+# if it detect the target servers are install older version than variable mention it will upgrade to the lasted version
+# Need passwordless as root user from ansible to targetservers which mention in hostsfile 
+# you can set root passwordless from ansible server to target servers with this followed command 
+#   ansible all -i hosts -k -u root -m authorized_key -a "user=root state=present key=\"{{ lookup('file','/home/ansible/.ssh/id_rsa.pub') }}\""
+# For oracle RAC enviroment install only firstnode it will automatic install in the second nodes unless root passwordless set in oracle rac enviroment
+# Testing and build ansible playbook by VOEURNG SOVANN for internal usage in FC Database support department 
+# Date : 27 Dec 2024  
+# Note : Before deploy this playbook in production enviroment make sure you are testing in your labs enviroment first  
+---
+- name: Manage Oracle Autonomous Health Framework
+  hosts: all
+  gather_facts: no
+  become: yes
+  become_user: root
+  vars:
+    ahf_latest_version: "24.11.0"  # Declare the variable for the latest AHF version
+
+  tasks:
+    - name: Check if Oracle AHF is installed
+      stat:
+        path: "/etc/oracle.ahf.loc"
+      register: ahf_installed
+
+    - name: Copy AHF software from Ansible server to install target
+      copy:
+        src: "/installer/software/AHF-LINUX_{{ ahf_latest_version }}.zip"
+        dest: "/tmp/AHF-LINUX_{{ ahf_latest_version }}.zip"
+        mode: '0644'
+      when: not ahf_installed.stat.exists or (ahf_installed.stat.exists and ahf_current_version is defined and ahf_current_version != ahf_latest_version)
+
+    - name: Unzip the AHF software
+      unarchive:
+        src: "/tmp/AHF-LINUX_{{ ahf_latest_version }}.zip"
+        dest: "/tmp/"
+        remote_src: yes
+      when: not ahf_installed.stat.exists or (ahf_installed.stat.exists and ahf_current_version is defined and ahf_current_version != ahf_latest_version)
+
+    - name: Install Oracle AHF in silent mode if not installed
+      command: "/tmp/ahf_setup -silent -data_dir /opt/oracle.ahf"
+      register: installation_result
+      when: not ahf_installed.stat.exists
+
+    - name: Display installation success message
+      debug:
+        msg: "You now have the latest version of Autonomous Health Framework with version {{ ahf_latest_version }}."
+      when: 
+        - not ahf_installed.stat.exists
+        - installation_result is defined
+        - installation_result.rc == 0
+
+    - name: Check Oracle AHF version if installed
+      command: "/opt/oracle.ahf/ahf/bin/ahfctl version"
+      register: ahf_version_output
+      when: ahf_installed.stat.exists
+      failed_when: false
+      changed_when: false
+
+    - name: Copy AHF software from Ansible server to upgrade target
+      copy:
+        src: "/installer/software/AHF-LINUX_{{ ahf_latest_version }}.zip"
+        dest: "/tmp/AHF-LINUX_{{ ahf_latest_version }}.zip"
+        mode: '0644'
+      when:  ahf_installed.stat.exists or (ahf_installed.stat.exists and ahf_current_version is defined and ahf_current_version != ahf_latest_version)
+    - name: Unzip the AHF software for upgrade
+      unarchive:
+        src: "/tmp/AHF-LINUX_{{ ahf_latest_version }}.zip"
+        dest: "/tmp/"
+        remote_src: yes
+      when: ahf_installed.stat.exists or (ahf_installed.stat.exists and ahf_current_version is defined and ahf_current_version != ahf_latest_version)
+
+
+
+    - name: Check if AHF is up to date
+      debug:
+        msg: "You already have the latest version of Autonomous Health Framework with version {{ ahf_latest_version }}."
+      when: 
+        - ahf_installed.stat.exists
+        - ahf_current_version is defined
+        - ahf_current_version == ahf_latest_version
+
+
+    - name: Set software staging location for upgrade
+      command: "/opt/oracle.ahf/bin/ahfctl setupgrade -swstage /tmp -autoupgrade on -frequency 7"
+      when: 
+        - ahf_installed.stat.exists
+        - ahf_current_version is defined
+        - ahf_current_version != ahf_latest_version
+
+    - name: Upgrade Oracle AHF if installed but not at the latest version
+      command: "/opt/oracle.ahf/bin/ahfctl upgrade"
+      register: upgrade_result
+      when:
+        - ahf_installed.stat.exists
+        - ahf_current_version is defined
+        - ahf_current_version != ahf_latest_version
+
+
+    - name: Display upgrade success message
+      debug:
+        msg: "You now have the latest version of Autonomous Health Framework with version {{ ahf_latest_version }}."
+      when: 
+        - ahf_installed.stat.exists
+        - upgrade_result is defined
+          #  - upgrade_result.rc == 1
+
+    - name: Clean up temporary files
+      file:
+              #path: "/tmp/AHF-LINUX_{{ ahf_latest_version }}.zip"
+        path: "{{item}}"
+        state: absent
+      with_items:
+        - "/tmp/AHF-LINUX_{{ ahf_latest_version }}.zip"
+        - "/tmp/ahf_setup"
+      tags: cleanfile
+      #  when: not ahf_installed.stat.exists or (ahf_installed.stat.exists and ahf_current_version is defined and ahf_current_version != ahf_latest_version)
