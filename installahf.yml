@@ -6,7 +6,7 @@
 # you can set root passwordless from ansible server to target servers with this followed command 
 #   ansible all -i hosts -k -u root -m authorized_key -a "user=root state=present key=\"{{ lookup('file','/home/ansible/.ssh/id_rsa.pub') }}\""
 # For oracle RAC enviroment install only firstnode it will automatic install in the second nodes unless root passwordless set in oracle rac enviroment
-# Testing and build ansible playbook by VOEURNG SOVANN for internal usage in FC Database support department 
+
 # Date : 27 Dec 2024  
 # Note : Before deploy this playbook in production enviroment make sure you are testing in your labs enviroment first  
 ---
