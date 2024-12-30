@@ -16,7 +16,7 @@
   become: yes
   become_user: root
   vars:
-    ahf_latest_version: "24.11.0"  # Declare the variable for the latest AHF version
+    ahf_latest_version: "v24.11.0"  # Declare the variable for the latest AHF version
 
   tasks:
     - name: Check if Oracle AHF is installed
