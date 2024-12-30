@@ -3,6 +3,7 @@
   	Autonomous Health Framework (AHF) - Including Trace File Analyzer and Orachk/Exachk (Doc ID 2550798.1)
 # this is the ansible playbook for install or upgrade the lasted version of oracle Autonomous Health Framework
     Logic  of this playbook
+    - software oracle AHF should be downloaded and input in /installer/software or you can put whereever but in ansible playbook you need to change location accordingly 
     - if it detect the target servers are not yet have oracle AHF then it will install with the lasted version  
     - if it detect the target servers are install older version than variable mention it will upgrade to the lasted version
     -  Need passwordless as root user from ansible to targetservers which mention in hostsfile 
